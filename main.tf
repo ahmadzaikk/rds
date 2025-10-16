@@ -1,16 +1,24 @@
+#########################################################
+# AWS RDS DB2 Terraform Module
+#########################################################
+
 # Get current AWS account info
 data "aws_caller_identity" "this" {}
 
+#########################################################
 # DB Subnet Group
+#########################################################
 resource "aws_db_subnet_group" "this" {
   count       = var.enabled ? 1 : 0
   name        = "${var.identifier}-subnet-group"
-  description = "Created by terraform"
+  description = "Created by Terraform"
   subnet_ids  = var.subnet_ids
   tags        = var.tags
 }
 
+#########################################################
 # Random password for Secrets Manager
+#########################################################
 resource "random_password" "password" {
   length           = 12
   special          = true
@@ -18,7 +26,9 @@ resource "random_password" "password" {
   override_special = "_%"
 }
 
+#########################################################
 # Secrets Manager secret
+#########################################################
 resource "aws_secretsmanager_secret" "this" {
   count                   = var.manage_master_user_password ? 0 : 1
   name                    = var.secret_manager_name
@@ -26,7 +36,9 @@ resource "aws_secretsmanager_secret" "this" {
   tags                    = var.tags
 }
 
-# Secrets Manager version
+#########################################################
+# Secrets Manager secret version
+#########################################################
 resource "aws_secretsmanager_secret_version" "this" {
   count         = var.manage_master_user_password ? 0 : 1
   secret_id     = aws_secretsmanager_secret.this[0].id
@@ -36,12 +48,15 @@ resource "aws_secretsmanager_secret_version" "this" {
   "password": "${random_password.password.result}"
 }
 EOF
+
   lifecycle {
     ignore_changes = [secret_string]
   }
 }
 
-# Optional KMS key
+#########################################################
+# Optional KMS Key (for encryption)
+#########################################################
 resource "aws_kms_key" "this" {
   count                    = var.create_cmk ? 1 : 0
   description              = "CMK for RDS instance ${var.identifier}"
@@ -52,14 +67,18 @@ resource "aws_kms_key" "this" {
   tags                     = var.tags
 }
 
-# KMS alias
+#########################################################
+# KMS Alias
+#########################################################
 resource "aws_kms_alias" "this" {
   count         = var.create_cmk ? 1 : 0
   name          = "alias/ucop/rds/${var.identifier}"
   target_key_id = aws_kms_key.this.*.key_id[0]
 }
 
-# KMS policy
+#########################################################
+# KMS Policy
+#########################################################
 data "aws_iam_policy_document" "this" {
   statement {
     sid       = "Enable IAM User Permissions"
@@ -116,7 +135,9 @@ data "aws_iam_policy_document" "this" {
   }
 }
 
-# DB2 Parameter Group (BYOL)
+#########################################################
+# DB2 Parameter Group
+#########################################################
 resource "aws_db_parameter_group" "db2_param_group" {
   count  = contains(["db2", "db2-se", "db2-ae"], var.engine) ? 1 : 0
   name   = "${var.identifier}-db2-param-group"
@@ -137,7 +158,9 @@ resource "aws_db_parameter_group" "db2_param_group" {
   tags = var.tags
 }
 
-# RDS Instance
+#########################################################
+# RDS DB Instance (DB2-safe)
+#########################################################
 resource "aws_db_instance" "this" {
   count                     = var.enabled ? 1 : 0
   identifier                = var.identifier
@@ -148,14 +171,28 @@ resource "aws_db_instance" "this" {
   allocated_storage         = var.allocated_storage
   max_allocated_storage     = var.max_allocated_storage
   storage_type              = var.storage_type
-  iops                      = var.iops
-  storage_throughput        = var.storage_throughput
+
+  # Only include IOPS/throughput if not DB2
+  dynamic "iops" {
+    for_each = contains(["db2", "db2-se", "db2-ae"], var.engine) ? [] : [1]
+    content {
+      iops = var.iops
+    }
+  }
+
+  dynamic "storage_throughput" {
+    for_each = contains(["db2", "db2-se", "db2-ae"], var.engine) ? [] : [1]
+    content {
+      storage_throughput = var.storage_throughput
+    }
+  }
+
   storage_encrypted         = var.storage_encrypted
   kms_key_id                = var.create_cmk ? aws_kms_key.this.*.arn[0] : var.kms_key_id
   db_subnet_group_name      = aws_db_subnet_group.this.*.id[0]
   vpc_security_group_ids    = var.vpc_security_group_ids
   publicly_accessible       = var.publicly_accessible
-  parameter_group_name = contains(["db2", "db2-se", "db2-ae"], var.engine) ? aws_db_parameter_group.db2_param_group[0].name : var.parameter_group_name
+  parameter_group_name      = contains(["db2", "db2-se", "db2-ae"], var.engine) ? aws_db_parameter_group.db2_param_group[0].name : var.parameter_group_name
   option_group_name         = var.option_group_name
   multi_az                  = var.multi_az
   manage_master_user_password = var.manage_master_user_password ? true : null
