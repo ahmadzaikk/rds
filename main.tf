@@ -118,7 +118,7 @@ data "aws_iam_policy_document" "this" {
 
 # DB2 Parameter Group (BYOL)
 resource "aws_db_parameter_group" "db2_param_group" {
-  count  = var.engine == "db2" ? 1 : 0
+  count  = contains(["db2", "db2-se", "db2-ae"], var.engine) ? 1 : 0
   name   = "${var.identifier}-db2-param-group"
   family = var.db2_family
 
@@ -155,7 +155,7 @@ resource "aws_db_instance" "this" {
   db_subnet_group_name      = aws_db_subnet_group.this.*.id[0]
   vpc_security_group_ids    = var.vpc_security_group_ids
   publicly_accessible       = var.publicly_accessible
-  parameter_group_name      = var.engine == "db2" ? aws_db_parameter_group.db2_param_group[0].name : var.parameter_group_name
+  parameter_group_name = contains(["db2", "db2-se", "db2-ae"], var.engine) ? aws_db_parameter_group.db2_param_group[0].name : var.parameter_group_name
   option_group_name         = var.option_group_name
   multi_az                  = var.multi_az
   manage_master_user_password = var.manage_master_user_password ? true : null
