@@ -37,12 +37,10 @@ resource "aws_secretsmanager_secret" "this" {
 resource "aws_secretsmanager_secret_version" "this" {
   count         = var.manage_master_user_password ? 0 : 1
   secret_id     = aws_secretsmanager_secret.this[0].id
-  secret_string = <<EOF
-{
-  "username": "${var.username}",
-  "password": "${random_password.password.result}"
-}
-EOF
+  secret_string = jsonencode({
+    username = var.username
+    password = random_password.password.result
+  })
 
   lifecycle {
     ignore_changes = [secret_string]
@@ -66,8 +64,8 @@ data "aws_iam_policy_document" "this" {
   }
 
   statement {
-    sid       = "AllowUseOfTheKey"
-    effect    = "Allow"
+    sid     = "AllowUseOfTheKey"
+    effect  = "Allow"
     actions = [
       "kms:Encrypt",
       "kms:Decrypt",
@@ -79,18 +77,13 @@ data "aws_iam_policy_document" "this" {
 
     principals {
       type        = "AWS"
-      identifiers = [
-        for account_id in concat(
-          [data.aws_caller_identity.this.account_id],
-          var.cmk_allowed_aws_account_ids
-        ) : "arn:aws:iam::${account_id}:root"
-      ]
+      identifiers = [for account_id in concat([data.aws_caller_identity.this.account_id], var.cmk_allowed_aws_account_ids) : "arn:aws:iam::${account_id}:root"]
     }
   }
 
   statement {
-    sid       = "AllowAttachmentOfPersistentResources"
-    effect    = "Allow"
+    sid     = "AllowAttachmentOfPersistentResources"
+    effect  = "Allow"
     actions = [
       "kms:CreateGrant",
       "kms:ListGrants",
@@ -106,12 +99,7 @@ data "aws_iam_policy_document" "this" {
 
     principals {
       type        = "AWS"
-      identifiers = [
-        for account_id in concat(
-          [data.aws_caller_identity.this.account_id],
-          var.cmk_allowed_aws_account_ids
-        ) : "arn:aws:iam::${account_id}:root"
-      ]
+      identifiers = [for account_id in concat([data.aws_caller_identity.this.account_id], var.cmk_allowed_aws_account_ids) : "arn:aws:iam::${account_id}:root"]
     }
   }
 }
@@ -129,7 +117,7 @@ resource "aws_kms_key" "this" {
 resource "aws_kms_alias" "this" {
   count         = var.create_cmk ? 1 : 0
   name          = "alias/ucop/rds/${var.identifier}"
-  target_key_id = aws_kms_key.this.*.key_id[0]
+  target_key_id = aws_kms_key.this[0].key_id
 }
 
 ############################################
@@ -183,25 +171,17 @@ resource "aws_db_instance" "this" {
   performance_insights_enabled = var.performance_insights_enabled
   ca_cert_identifier           = var.ca_cert_identifier
 
-  # Only include IOPS / throughput for supported engines
-  iops               = var.engine != "db2-se" ? var.iops : null
-  storage_throughput = var.engine != "db2-se" ? var.storage_throughput : null
+  # Conditional IOPS / throughput only for non-DB2-SE engines
+  iops               = var.engine == "db2-se" ? null : var.iops
+  storage_throughput = var.engine == "db2-se" ? null : var.storage_throughput
 
-  parameter_group_name = contains(["db2", "db2-se", "db2-ae"], var.engine)
-    ? aws_db_parameter_group.db2_param_group[0].name
-    : var.parameter_group_name
-
-  option_group_name = var.option_group_name
+  parameter_group_name = contains(["db2", "db2-se", "db2-ae"], var.engine) ? aws_db_parameter_group.db2_param_group[0].name : var.parameter_group_name
+  option_group_name    = var.option_group_name
 
   # Master credentials
   manage_master_user_password = var.manage_master_user_password ? true : null
-  username = var.manage_master_user_password
-    ? var.username
-    : jsondecode(aws_secretsmanager_secret_version.this[0].secret_string)["username"]
-
-  password = var.manage_master_user_password
-    ? null
-    : jsondecode(aws_secretsmanager_secret_version.this[0].secret_string)["password"]
+  username = var.manage_master_user_password ? var.username : jsondecode(aws_secretsmanager_secret_version.this[0].secret_string)["username"]
+  password = var.manage_master_user_password ? null : jsondecode(aws_secretsmanager_secret_version.this[0].secret_string)["password"]
 
   enabled_cloudwatch_logs_exports = var.enabled_cloudwatch_logs_exports
 
