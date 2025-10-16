@@ -13,11 +13,13 @@ variable "engine" {
 variable "engine_version" {
   type        = string
   default     = ""
+  description = "Database engine version"
 }
 
 variable "identifier" {
   type        = string
   default     = ""
+  description = "RDS instance identifier"
 }
 
 variable "skip_final_snapshot" {
@@ -26,20 +28,22 @@ variable "skip_final_snapshot" {
   default     = true
 }
 
-
 variable "instance_class" {
   type        = string
   default     = ""
+  description = "RDS instance class"
 }
 
 variable "allocated_storage" {
   type        = string
   default     = ""
+  description = "Allocated storage in GB"
 }
 
 variable "max_allocated_storage" {
   type        = string
   default     = null
+  description = "Maximum storage for autoscaling"
 }
 
 variable "backup_retention_period" {
