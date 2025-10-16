@@ -1,3 +1,6 @@
+############################################
+# Outputs
+############################################
 output "rds_endpoint" {
   value       = join("", aws_db_instance.this.*.endpoint)
   description = "RDS EndPoint with port"
