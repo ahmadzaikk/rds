@@ -123,13 +123,13 @@ variable "cmk_allowed_aws_account_ids" {
 
 variable "storage_type" {
   type        = string
-  description = "gp3 for MySQL/Postgres, or gp3 for DB2 (min 400GB, IOPS not required)"
+  description = "Storage type (gp3 for MySQL/Postgres, gp3 for DB2)"
   default     = "gp3"
 }
 
 variable "iops" {
   type        = number
-  description = "IOPS (not required for DB2)"
+  description = "IOPS (not required for DB2-SE)"
   default     = null
 }
 
@@ -174,7 +174,7 @@ variable "tags" {
   default = {}
 }
 
-# DB2 BYOL-specific variables
+# DB2 BYOL-specific
 variable "license_model" {
   type        = string
   description = "License model for DB2 (BYOL required)"
