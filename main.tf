@@ -1,5 +1,7 @@
+# Get current AWS account info
 data "aws_caller_identity" "this" {}
 
+# DB Subnet Group
 resource "aws_db_subnet_group" "this" {
   count       = var.enabled ? 1 : 0
   name        = "${var.identifier}-subnet-group"
@@ -8,6 +10,7 @@ resource "aws_db_subnet_group" "this" {
   tags        = var.tags
 }
 
+# Random password for Secrets Manager
 resource "random_password" "password" {
   length           = 12
   special          = true
@@ -15,6 +18,7 @@ resource "random_password" "password" {
   override_special = "_%"
 }
 
+# Secrets Manager secret
 resource "aws_secretsmanager_secret" "this" {
   count                   = var.manage_master_user_password ? 0 : 1
   name                    = var.secret_manager_name
@@ -22,6 +26,7 @@ resource "aws_secretsmanager_secret" "this" {
   tags                    = var.tags
 }
 
+# Secrets Manager version
 resource "aws_secretsmanager_secret_version" "this" {
   count         = var.manage_master_user_password ? 0 : 1
   secret_id     = aws_secretsmanager_secret.this[0].id
@@ -36,6 +41,7 @@ EOF
   }
 }
 
+# Optional KMS key
 resource "aws_kms_key" "this" {
   count                    = var.create_cmk ? 1 : 0
   description              = "CMK for RDS instance ${var.identifier}"
@@ -46,12 +52,14 @@ resource "aws_kms_key" "this" {
   tags                     = var.tags
 }
 
+# KMS alias
 resource "aws_kms_alias" "this" {
   count         = var.create_cmk ? 1 : 0
   name          = "alias/ucop/rds/${var.identifier}"
   target_key_id = aws_kms_key.this.*.key_id[0]
 }
 
+# KMS policy
 data "aws_iam_policy_document" "this" {
   statement {
     sid       = "Enable IAM User Permissions"
@@ -108,7 +116,7 @@ data "aws_iam_policy_document" "this" {
   }
 }
 
-# DB2 Parameter Group for BYOL
+# DB2 Parameter Group (BYOL)
 resource "aws_db_parameter_group" "db2_param_group" {
   count  = var.engine == "db2" ? 1 : 0
   name   = "${var.identifier}-db2-param-group"
@@ -129,7 +137,7 @@ resource "aws_db_parameter_group" "db2_param_group" {
   tags = var.tags
 }
 
-# RDS instance
+# RDS Instance
 resource "aws_db_instance" "this" {
   count                     = var.enabled ? 1 : 0
   identifier                = var.identifier
