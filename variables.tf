@@ -138,7 +138,7 @@ variable "storage_throughput" {
 
 variable "parameter_group_name" {
   type    = string
-  default = "default.mysql8.0"
+  default = null
 }
 
 variable "option_group_name" {
