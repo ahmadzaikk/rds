@@ -6,20 +6,20 @@ variable "enabled" {
 
 variable "engine" {
   type        = string
-  default     = ""
-  description = "Database engine (mysql, postgres, db2)"
+  description = "Database engine (mysql, postgres, db2-se)"
+  default     = "db2-se"
 }
 
 variable "engine_version" {
   type        = string
-  default     = ""
   description = "Database engine version"
+  default     = "11.5.8.0"
 }
 
 variable "identifier" {
   type        = string
-  default     = ""
   description = "RDS instance identifier"
+  default     = ""
 }
 
 variable "skip_final_snapshot" {
@@ -30,25 +30,25 @@ variable "skip_final_snapshot" {
 
 variable "instance_class" {
   type        = string
-  default     = ""
   description = "RDS instance class"
+  default     = "db.m6i.large"
 }
 
 variable "allocated_storage" {
-  type        = string
-  default     = ""
-  description = "Allocated storage in GB"
+  type        = number
+  description = "Allocated storage in GB (DB2 requires minimum 400GB)"
+  default     = 400
 }
 
 variable "max_allocated_storage" {
-  type        = string
-  default     = null
+  type        = number
   description = "Maximum storage for autoscaling"
+  default     = 500
 }
 
 variable "backup_retention_period" {
-  type    = number
-  default = 14
+  type        = number
+  default     = 28
 }
 
 variable "backup_window" {
@@ -83,12 +83,12 @@ variable "apply_immediately" {
 
 variable "manage_master_user_password" {
   type    = bool
-  default = false
+  default = true
 }
 
 variable "username" {
   type    = string
-  default = "admin"
+  default = "db2admin"
 }
 
 variable "secret_manager_name" {
@@ -122,18 +122,21 @@ variable "cmk_allowed_aws_account_ids" {
 }
 
 variable "storage_type" {
-  type    = string
-  default = "gp3"
+  type        = string
+  description = "gp3 for MySQL/Postgres, or gp3 for DB2 (min 400GB, IOPS not required)"
+  default     = "gp3"
 }
 
 variable "iops" {
-  type    = number
-  default = 3000
+  type        = number
+  description = "IOPS (not required for DB2)"
+  default     = null
 }
 
 variable "storage_throughput" {
-  type    = number
-  default = 125
+  type        = number
+  description = "Storage throughput in MB/s (optional for gp3)"
+  default     = null
 }
 
 variable "parameter_group_name" {
@@ -143,7 +146,7 @@ variable "parameter_group_name" {
 
 variable "option_group_name" {
   type    = string
-  default = ""
+  default = null
 }
 
 variable "copy_tags_to_snapshot" {
@@ -153,7 +156,7 @@ variable "copy_tags_to_snapshot" {
 
 variable "enabled_cloudwatch_logs_exports" {
   type    = list(string)
-  default = []
+  default = ["audit", "error"]
 }
 
 variable "vpc_security_group_ids" {
@@ -171,25 +174,29 @@ variable "tags" {
   default = {}
 }
 
-# DB2 BYOL specific
+# DB2 BYOL-specific variables
 variable "license_model" {
-  type    = string
-  default = "bring-your-own-license"
+  type        = string
+  description = "License model for DB2 (BYOL required)"
+  default     = "bring-your-own-license"
 }
 
 variable "ibm_customer_id" {
-  type    = string
-  default = ""
+  type        = string
+  description = "IBM customer ID for DB2 BYOL"
+  default     = ""
 }
 
 variable "ibm_site_id" {
-  type    = string
-  default = ""
+  type        = string
+  description = "IBM site ID for DB2 BYOL"
+  default     = ""
 }
 
 variable "db2_family" {
-  type    = string
-  default = "db2-ae-11.5"
+  type        = string
+  description = "DB2 family name"
+  default     = "db2-ae-11.5"
 }
 
 variable "snapshot_identifier" {
@@ -199,7 +206,7 @@ variable "snapshot_identifier" {
 
 variable "performance_insights_enabled" {
   type    = bool
-  default = false
+  default = true
 }
 
 variable "ca_cert_identifier" {
