@@ -20,6 +20,13 @@ variable "identifier" {
   default     = ""
 }
 
+variable "skip_final_snapshot" {
+  description = "Set to true to skip final snapshot when deleting RDS instance"
+  type        = bool
+  default     = true
+}
+
+
 variable "instance_class" {
   type        = string
   default     = ""
