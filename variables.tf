@@ -178,7 +178,7 @@ variable "tags" {
 variable "license_model" {
   type        = string
   description = "License model for DB2 (BYOL required)"
-  default     = "bring-your-own-license"
+  default     = "general-public-license"
 }
 
 variable "ibm_customer_id" {
