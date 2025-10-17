@@ -88,7 +88,7 @@ variable "manage_master_user_password" {
 
 variable "username" {
   type    = string
-  default = "db2admin"
+  default = "admin"
 }
 
 variable "secret_manager_name" {
