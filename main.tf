@@ -184,6 +184,8 @@ resource "aws_db_instance" "this" {
   password = var.manage_master_user_password ? null : jsondecode(aws_secretsmanager_secret_version.this[0].secret_string)["password"]
 
   enabled_cloudwatch_logs_exports = var.enabled_cloudwatch_logs_exports
+  skip_final_snapshot       = var.skip_final_snapshot
+  final_snapshot_identifier = var.skip_final_snapshot ? null : "${var.identifier}-final-snapshot-${timestamp()}"
 
   tags = var.tags
 
